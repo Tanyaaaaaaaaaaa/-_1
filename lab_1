@@ -1,0 +1,33 @@
+def extended_gcd(a, b):
+    if a == 0:
+        return b, 0, 1
+
+    d, x1, y1 = extended_gcd(b % a, a)
+    x = y1 - (b // a) * x1
+    y = x1
+    return d, x, y
+
+def modular_inverse(a, n):
+
+
+    gcd, x, y = extended_gcd(a, n)
+
+    if gcd != 1:
+        return 0  # Обратного элемента не существует
+
+    # Обратный элемент может быть отрицательным, приводим его к положительному виду
+    return (x % n + n) % n
+
+
+print("Автор: Москат Татьяна Михайловна")
+print("Группа: 090304-РПИа-о24")
+
+# Ввод данных
+print("Введите два целых числа a и n (через пробел):")
+a, n = map(int, input().split())
+
+# Вычисление обратного элемента
+result = modular_inverse(a, n)
+
+# Вывод результата
+print(result)
