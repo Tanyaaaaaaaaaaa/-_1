@@ -4,58 +4,59 @@
 #include <chrono>
 #include <fstream>
 #include <cblas.h>
+#include <algorithm>
 
-const int N = 4096;
-const double complexity = 2.0 * N * N * N; // 2n^3 operations
+const int MatrixSize = 4096;
+const double TotalOps = 2.0 * MatrixSize * MatrixSize * MatrixSize; // 2n^3 операций
 
 // Генерация случайной матрицы
-void generate_matrix(std::vector<double> &mat)
+void generate_matrix(std::vector<double> &matrix)
 {
     std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(-1.0, 1.0);
+    std::mt19937 generator(rd());
+    std::uniform_real_distribution<> distribution(-1.0, 1.0);
 
-    for (auto &val : mat)
+    for (auto &element : matrix)
     {
-        val = dis(gen);
+        element = distribution(generator);
     }
 }
 
 // Наивное умножение матриц
-void naive_mmul(const std::vector<double> &A, const std::vector<double> &B, std::vector<double> &C)
+void naive_mmul(const std::vector<double> &MatA, const std::vector<double> &MatB, std::vector<double> &MatC)
 {
-    for (int i = 0; i < N; ++i)
+    for (int row = 0; row < MatrixSize; ++row)
     {
-        for (int j = 0; j < N; ++j)
+        for (int col = 0; col < MatrixSize; ++col)
         {
             double sum = 0.0;
-            for (int k = 0; k < N; ++k)
+            for (int k = 0; k < MatrixSize; ++k)
             {
-                sum += A[i * N + k] * B[k * N + j];
+                sum += MatA[row * MatrixSize + k] * MatB[k * MatrixSize + col];
             }
-            C[i * N + j] = sum;
+            MatC[row * MatrixSize + col] = sum;
         }
     }
 }
 
 // Оптимизированное умножение (блочный алгоритм)
-void optimized_mmul(const std::vector<double> &A, const std::vector<double> &B, std::vector<double> &C)
+void optimized_mmul(const std::vector<double> &MatA, const std::vector<double> &MatB, std::vector<double> &MatC)
 {
-    const int block_size = 64;
-    for (int i = 0; i < N; i += block_size)
+    const int Block = 64;
+    for (int i = 0; i < MatrixSize; i += Block)
     {
-        for (int j = 0; j < N; j += block_size)
+        for (int j = 0; j < MatrixSize; j += Block)
         {
-            for (int k = 0; k < N; k += block_size)
+            for (int k = 0; k < MatrixSize; k += Block)
             {
-                for (int ii = i; ii < std::min(i + block_size, N); ++ii)
+                for (int ii = i; ii < std::min(i + Block, MatrixSize); ++ii)
                 {
-                    for (int kk = k; kk < std::min(k + block_size, N); ++kk)
+                    for (int kk = k; kk < std::min(k + Block, MatrixSize); ++kk)
                     {
-                        double a = A[ii * N + kk];
-                        for (int jj = j; jj < std::min(j + block_size, N); ++jj)
+                        double valA = MatA[ii * MatrixSize + kk];
+                        for (int jj = j; jj < std::min(j + Block, MatrixSize); ++jj)
                         {
-                            C[ii * N + jj] += a * B[kk * N + jj];
+                            MatC[ii * MatrixSize + jj] += valA * MatB[kk * MatrixSize + jj];
                         }
                     }
                 }
@@ -65,49 +66,54 @@ void optimized_mmul(const std::vector<double> &A, const std::vector<double> &B, 
 }
 
 // Запуск теста и вывод результатов
-void run_test(const std::vector<double> &A, const std::vector<double> &B,
-              const std::string &name,
-              void (*mmul)(const std::vector<double> &, const std::vector<double> &, std::vector<double> &))
+void benchmark(const std::vector<double> &MatA, const std::vector<double> &MatB,
+               const std::string &method_name,
+               void (*id7951572 (*multiply))(const std::vector<double> &, const std::vector<double> &, std::vector<double> &))
 {
-    std::vector<double> C(N * N, 0.0);
-    auto start = std::chrono::high_resolution_clock::now();
-    mmul(A, B, C);
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    double gflops = (complexity / elapsed.count()) * 1e-9;
-    std::cout << name << ": " << gflops << " GFLOPS (time: " << elapsed.count() << "s)\n";
+    std::vector<double> MatResult(MatrixSize * MatrixSize, 0.0);
+    auto start_time = std::chrono::high_resolution_clock::now();
+    multiply(MatA, MatB, MatResult);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end_time - start_time;
+    double gflops = (TotalOps / elapsed.count()) * 1e-9;
+    std::cout << method_name << ": " << gflops << " GFLOPS (time: " << elapsed.count() << "s)\n";
 }
 
 int main()
 {
-    cout<<"Москат Татьяна Михайловна 090304-РПИа-о24"<<endl;
-    std::vector<double> A(N * N);
-    std::vector<double> B(N * N);
+    std::cout << "Москат Татьяна Михайловна 090304-РПИа-о24" << std::endl;
+    
+    std::vector<double> MatrixA(MatrixSize * MatrixSize);
+    std::vector<double> MatrixB(MatrixSize * MatrixSize);
+    
     // Загрузка или генерация матриц
-    std::ifstream in_file("matrices.bin", std::ios::binary);
-    if (in_file)
+    std::ifstream input_file("matrices.bin", std::ios::binary);
+    if (input_file)
     {
-        in_file.read(reinterpret_cast<char *>(A.data()), A.size() * sizeof(double));
-        in_file.read(reinterpret_cast<char *>(B.data()), B.size() * sizeof(double));
-        in_file.close();
+        input_file.read(reinterpret_cast<char *>(MatrixA.data()), MatrixA.size() * sizeof(double));
+        input_file.read(reinterpret_cast<char *>(MatrixB.data()), MatrixB.size() * sizeof(double));
+        input_file.close();
         std::cout << "Matrices loaded from file\n";
     }
     else
     {
-        generate_matrix(A);
-        generate_matrix(B);
-        std::ofstream out_file("matrices.bin", std::ios::binary);
-        out_file.write(reinterpret_cast<const char *>(A.data()), A.size() * sizeof(double));
-        out_file.write(reinterpret_cast<const char *>(B.data()), B.size() * sizeof(double));
-        out_file.close();
+        generate_matrix(MatrixA);
+        generate_matrix(MatrixB);
+        std::ofstream output_file("matrices.bin", std::ios::binary);
+        output_file.write(reinterpret_cast<const char *>(MatrixA.data()), MatrixA.size() * sizeof(double));
+        output_file.write(reinterpret_cast<const char *>(MatrixB.data()), MatrixB.size() * sizeof(double));
+        output_file.close();
         std::cout << "New random matrices generated\n";
     }
+    
     // Тестирование методов
-    run_test(A, B, "Naive multiplication", naive_mmul);
-    run_test(A, B, "Optimized multiplication", optimized_mmul);
+    benchmark(MatrixA, MatrixB, "Naive multiplication", naive_mmul);
+    benchmark(MatrixA, MatrixB, "Optimized multiplication",optimized_mmul);
 
-    run_test(A, B, "BLAS dgemm", [](const auto &A, const auto &B, auto &C)
+    // Тест BLAS
+    benchmark(MatrixA, MatrixB, "BLAS dgemm", [](const auto &A, const auto &B, auto &C)
              { cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                           N, N, N, 1.0, A.data(), N, B.data(), N, 0.0, C.data(), N); });
+                           MatrixSize, MatrixSize, MatrixSize, 1.0, A.data(), MatrixSize, B.data(), MatrixSize, 0.0, C.data(), MatrixSize); });
+    
     return 0;
 }
